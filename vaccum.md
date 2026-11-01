@@ -1,16 +1,91 @@
 # 01. Simple Reflex Vacuum Cleaner Agent
 
-Standalone study guide. The full commented program is included at the end. The ZIP contains the original files, observed transcripts, shared reference notes and GitHub folder structure.
+## 1) Code
 
-## 1. Recognize the slip
+```python
+def vacuum_agent(location, status):
 
-**Official syllabus, Part A, assignment 1:** “Design and implement a simple reflex agent for the Vacuum Cleaner world and analyze its rational behavior in a given environment.”
+    if status == "Dirty":
+        return "Suck"
+    elif location == "Left":
+        return "Right"
+    else:
+        return "Left"
 
-**Say this in the oral:** “My program simulates two rooms and a vacuum cleaner. The agent receives its current location and that room's cleanliness. If dirty, it cleans; otherwise, it moves to the other room. The simulator stops when both rooms are clean.”
+def display_environment(left_room, right_room, vacuum_location):
 
-Memory cue: **Sense -> Apply rule -> Act -> Update world -> Check goal.**
+    left = f"[{left_room}]"
+    right = f"[{right_room}]"
 
-## 2. What to write in the practical journal
+    if vacuum_location == "Left":
+        left = f"[Vacuum, {left_room}]"
+    else:
+        right = f"[Vacuum, {right_room}]"
+
+    print(f"{left}  {right}")
+
+def run_vacuum_world(left_room, right_room, start_location, steps=10):
+
+    location = start_location
+
+    print("\nINITIAL STATE")
+    display_environment(left_room, right_room, location)
+
+    for step in range(1, steps + 1):
+
+        if location == "Left":
+            status = left_room
+        else:
+            status = right_room
+
+        percept = (location, status)
+
+        action = vacuum_agent(location, status)
+
+        print(f"\nStep {step}")
+        print("Percept:", percept)
+        print("Action :", action)
+
+        if action == "Suck":
+            if location == "Left":
+                left_room = "Clean"
+            else:
+                right_room = "Clean"
+
+        elif action == "Right":
+            location = "Right"
+
+        elif action == "Left":
+            location = "Left"
+
+        display_environment(left_room, right_room, location)
+
+        if left_room == "Clean" and right_room == "Clean":
+            print("\n✔ Goal Achieved: Both rooms are clean!")
+            break
+
+print("===== PERCEPT SEQUENCE 1 =====")
+
+run_vacuum_world(
+    left_room="Dirty",
+    right_room="Dirty",
+    start_location="Left"
+)
+
+print("\n\n===== PERCEPT SEQUENCE 2 =====")
+
+run_vacuum_world(
+    left_room="Dirty",
+    right_room="Dirty",
+    start_location="Right"
+)
+```
+
+## 2) Theory to write
+
+### Question
+
+**Official syllabus: Part A, assignment 1.** Design and implement a simple reflex agent for the Vacuum Cleaner world and analyze its rational behavior in a given environment.
 
 ### Aim
 
@@ -70,17 +145,31 @@ With both rooms dirty, starting from either side takes three actions: clean the 
 
 The simple reflex agent successfully cleans the supplied two-room environments using current-percept condition-action rules. The simulation demonstrates agent-environment interaction and the limits of a memoryless policy.
 
-## 3. Understand the representation
+## 3) Explaining the question, code and functioning
+
+### Understanding the question
+
+The question asks you to build an agent that observes its present situation and immediately chooses an action from fixed rules. You must show both the program and why its actions make sense in the two-room world.
+
+**Say this in the oral:** “My program simulates two rooms and a vacuum cleaner. The agent receives its current location and that room's cleanliness. If dirty, it cleans; otherwise, it moves to the other room. The simulator stops when both rooms are clean.”
+
+Memory cue: **Sense -> Apply rule -> Act -> Update world -> Check goal.**
+
+### How the whole program runs
+
+Python defines the three functions first. The first top-level call to `run_vacuum_world` starts at Left. Every iteration calls `vacuum_agent`, applies its returned action, and calls `display_environment`. The second top-level call starts a fresh simulation at Right.
+
+### Understand the representation
 
 `left_room` and `right_room` are strings storing the environment's dirt status. `location` is the vacuum position. `percept` is a tuple for displaying the sensed information. `action` is the string returned by the decision function.
 
 The **simulator's state** is different from **agent memory**. The existence of `left_room` and `right_room` in `run_vacuum_world` does not make `vacuum_agent` a model-based agent.
 
-## 4. Code in blocks
+### Code in blocks
 
-### Block A: choose an action
+#### Block A: choose an action
 
-Original lines 3-10:
+Relevant code block:
 
 ```python
 def vacuum_agent(location, status):
@@ -99,9 +188,9 @@ def vacuum_agent(location, status):
 - `return` sends an action string to the caller and immediately exits the function. This function chooses the action; the simulator carries it out later.
 - Example: `vacuum_agent("Left", "Dirty")` returns `"Suck"`; `vacuum_agent("Left", "Clean")` returns `"Right"`.
 
-### Block B: show the world
+#### Block B: show the world
 
-Original lines 12-22:
+Relevant code block:
 
 ```python
 def display_environment(left_room, right_room, vacuum_location):
@@ -119,9 +208,9 @@ def display_environment(left_room, right_room, vacuum_location):
 
 `f"[{left_room}]"` is an f-string: Python inserts the variable value inside `{}`. The function labels whichever room contains the vacuum, then prints both strings. It does not change room cleanliness or choose actions.
 
-### Block C: initialize, sense, and decide
+#### Block C: initialize, sense, and decide
 
-Original lines 24-40:
+Relevant code block:
 
 ```python
 def run_vacuum_world(left_room, right_room, start_location, steps=10):
@@ -149,9 +238,9 @@ def run_vacuum_world(left_room, right_room, start_location, steps=10):
 - `(location, status)` groups two values in a tuple.
 - `vacuum_agent(location, status)` calls Block A. `percept` itself is displayed, while its two components are passed as separate arguments.
 
-### Block D: carry out the action and stop
+#### Block D: carry out the action and stop
 
-Original lines 42-62:
+Relevant code block:
 
 ```python
         print(f"\nStep {step}")
@@ -179,9 +268,9 @@ Original lines 42-62:
 
 `Suck` assigns `"Clean"` to the current room. Moving assigns a new value to `location`. `and` requires both room comparisons to be true. `break` exits the simulation's `for` loop. It does not return a value from the agent function.
 
-### Block E: run two examples
+#### Block E: run two examples
 
-Original lines 64-78:
+Relevant code block:
 
 ```python
 print("===== PERCEPT SEQUENCE 1 =====")
@@ -203,7 +292,7 @@ run_vacuum_world(
 
 These are **keyword arguments**: the names show which parameter gets each value. Every call has its own local room state, so the second run starts with two dirty rooms again.
 
-## 5. Dry run to understand the output
+### Dry run to understand the output
 
 Starting state: Left dirty, Right dirty, vacuum at Left.
 
@@ -215,7 +304,7 @@ Starting state: Left dirty, Right dirty, vacuum at Left.
 
 Starting on Right produces `Suck -> Left -> Suck`. These are three **actions**, including two cleaning actions and one movement.
 
-## 6. Complexity and limitations
+### Complexity and limitations
 
 Each decision takes constant time and constant auxiliary space. For a requested step limit `s`, simulation time is `O(s)` and auxiliary memory is `O(1)` apart from output. The supplied examples stop after three steps.
 
@@ -223,7 +312,7 @@ If both rooms start clean, this program still performs one movement before its f
 
 On an old Windows terminal, the check-mark character in the success message may cause an encoding error. Replace only `✔` with `Goal achieved` or run a UTF-8 terminal if that occurs; it has no effect on the algorithm.
 
-## 7. Viva questions with short answers
+### Viva questions with short answers
 
 1. **What is a simple reflex agent?** An agent that selects an action using only the current percept and condition-action rules.
 2. **What is the percept here?** Current location and the current room's cleanliness.
@@ -242,109 +331,21 @@ On an old Windows terminal, the check-mark character in the success message may 
 15. **How is a model-based agent different?** It maintains an internal state/model to infer information not present in the current percept.
 16. **Can the policy decide to stop when both rooms are clean?** Not from its current percept alone; the simulator handles that condition.
 
-## 8. Recreate the code from memory
+### Recreate the code from memory
 
 Write the three-rule `vacuum_agent` first. Then write a loop that senses the current room, calls the agent, applies the returned action, and checks both rooms. Add display formatting last.
 
 If the examiner changes the starting conditions, change the three arguments in the example calls. Preserve the exact status/location strings. Explain the new action sequence before running it.
 
-## Appendix A. Uploaded program: commented version
+### Keywords, functions and expressions to recognize
 
-Only explanatory comments were added. Executable logic is the same as the uploaded original.
+A keyword is reserved language syntax. Names such as `all`, `min`, `set`, `range` and `enumerate` are built-ins; they are not Python keywords.
 
-```python
-# Simple Reflex Vacuum Cleaner Agent
-# Study copy: only explanatory comments were added; algorithm is unchanged.
-# See README.md for journal theory, block explanations, dry run and viva.
-
-# Simple Reflex Vacuum Cleaner Agent
-
-# Decision function: look only at the current location and current room status.
-def vacuum_agent(location, status):
-
-    # Condition-action rule 1: if the current room is dirty, clean it.
-    if status == "Dirty":
-        return "Suck"
-    # Rules 2 and 3: from a clean room, move to the other room.
-    elif location == "Left":
-        return "Right"
-    else:
-        return "Left"
-
-# Display function: build two strings; put the Vacuum label in its current room.
-def display_environment(left_room, right_room, vacuum_location):
-
-    left = f"[{left_room}]"
-    right = f"[{right_room}]"
-
-    if vacuum_location == "Left":
-        left = f"[Vacuum, {left_room}]"
-    else:
-        right = f"[Vacuum, {right_room}]"
-
-    print(f"{left}  {right}")
-
-# Simulator: it stores the real world, repeatedly senses, acts, updates and displays.
-def run_vacuum_world(left_room, right_room, start_location, steps=10):
-
-    location = start_location
-
-    print("\nINITIAL STATE")
-    display_environment(left_room, right_room, location)
-
-    # At most steps iterations. range excludes its upper bound, hence steps + 1.
-    for step in range(1, steps + 1):
-
-        # Sense ONLY the current room for the agent decision.
-        if location == "Left":
-            status = left_room
-        else:
-            status = right_room
-
-        # A percept is the agent input: (location, status). This tuple is for display.
-        percept = (location, status)
-
-        # The simulator passes the same percept information as two arguments.
-        action = vacuum_agent(location, status)
-
-        print(f"\nStep {step}")
-        print("Percept:", percept)
-        print("Action :", action)
-
-        # Apply the returned action to the simulated world.
-        if action == "Suck":
-            if location == "Left":
-                left_room = "Clean"
-            else:
-                right_room = "Clean"
-
-        elif action == "Right":
-            location = "Right"
-
-        elif action == "Left":
-            location = "Left"
-
-        display_environment(left_room, right_room, location)
-
-        # The SIMULATOR checks both rooms. The simple reflex policy has no such memory.
-        if left_room == "Clean" and right_room == "Clean":
-            print("\n✔ Goal Achieved: Both rooms are clean!")
-            break
-
-# Run two separate simulations, once from each starting location.
-print("===== PERCEPT SEQUENCE 1 =====")
-
-run_vacuum_world(
-    left_room="Dirty",
-    right_room="Dirty",
-    start_location="Left"
-)
-
-print("\n\n===== PERCEPT SEQUENCE 2 =====")
-
-run_vacuum_world(
-    left_room="Dirty",
-    right_room="Dirty",
-    start_location="Right"
-)
-```
+| Expression | What it means here |
+| --- | --- |
+| `def` | Keyword defining a function; it does not call the function. |
+| `if`, `elif`, `else` | Keywords selecting one condition-action branch. |
+| `return` | Keyword sending an action value back to the simulator. |
+| `for`, `range` | `for` is a keyword; `range` supplies the step numbers. |
+| `and`, `break` | Require both rooms clean, then exit the simulation loop. |
+| `f"...{value}..."` | An f-string that inserts a value into displayed text. |

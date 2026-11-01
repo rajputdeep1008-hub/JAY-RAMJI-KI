@@ -1,16 +1,87 @@
 # 03. Tower of Hanoi by State-Space Search
 
-Standalone study guide. The full commented program is included at the end. The ZIP contains the original files, observed transcripts, shared reference notes and GitHub folder structure.
+## 1) Code
 
-## 1. Recognize the slip
+```python
+from collections import deque
 
-**Official syllabus, Part A, assignment 5:** “Implement Tower of Hanoi by State Space Search”.
+def successors(state):
+    result = []
+    pegs = [list(peg) for peg in state]
+    for source in range(3):
+        if not pegs[source]:
+            continue
+        disk = pegs[source][-1]
+        for destination in range(3):
+            if source == destination or (pegs[destination] and pegs[destination][-1] < disk):
+                continue
+            next_pegs = [peg[:] for peg in pegs]
+            next_pegs[source].pop()
+            next_pegs[destination].append(disk)
+            result.append((tuple(map(tuple, next_pegs)), (source, destination)))
+    return result
 
-**Say this in the oral:** “I represent the three pegs as a tuple of tuples. A successor moves one top disk to a legal destination. BFS searches configurations level by level, and parent links reconstruct the shortest move sequence.”
+def state_space_search(disks):
+    start = (tuple(range(disks, 0, -1)), (), ())
+    goal = ((), (), tuple(range(disks, 0, -1)))
+    frontier = deque([start])
+    parent = {start: (None, None)}
+    depth = {start: 0}
+    explored = 0
+    current_level = -1
+    level_count = 0
 
-Memory cue: **Top disk only -> Legal destination -> Copy -> BFS -> Backtrack parents.**
+    while frontier:
+        state = frontier.popleft()
+        explored += 1
+        level = depth[state]
+        if level != current_level:
+            if current_level != -1:
+                print(f"Total states at Level {current_level}: {level_count}\n")
+            current_level = level
+            level_count = 0
+            print(f"{'=' * 15} LEVEL {level} {'=' * 15}")
+        print(state)
+        level_count += 1
+        if state == goal:
+            break
+        for next_state, action in successors(state):
+            if next_state not in parent:
+                parent[next_state] = (state, action)
+                depth[next_state] = depth[state] + 1
+                frontier.append(next_state)
 
-## 2. What to write in the practical journal
+    if current_level != -1:
+        print(f"Total states at Level {current_level}: {level_count}")
+
+    if goal not in parent:
+        return None, explored
+
+    path = []
+    state = goal
+    while parent[state][0] is not None:
+        previous, action = parent[state]
+        path.append(action)
+        state = previous
+    return path[::-1], explored
+
+disks = int(input("Enter number of disks: "))
+moves, explored = state_space_search(disks)
+print("\nStates explored:", explored)
+print("\n========== SHORTEST SOLUTION ==========")
+if moves is None:
+    print("No solution found.")
+else:
+    for number, (source, destination) in enumerate(moves, 1):
+        print(f"Move {number}: Peg {source} -> Peg {destination}")
+    print("Total moves:", len(moves))
+```
+
+## 2) Theory to write
+
+### Question
+
+**Official syllabus: Part A, assignment 5.** Implement Tower of Hanoi by State Space Search
 
 ### Aim
 
@@ -61,7 +132,21 @@ For 3 disks, the program produces a legal solution of 7 moves. In the supplied i
 
 The BFS state-space implementation solves the supplied Tower of Hanoi problem with a shortest sequence of legal unit-cost moves, demonstrating successor generation and path reconstruction.
 
-## 3. Representation: understand before memorizing
+## 3) Explaining the question, code and functioning
+
+### Understanding the question
+
+The question asks you to model disk configurations and search between them. Your code implements explicit BFS through the state space; it is different from printing the standard recursive Hanoi move sequence.
+
+**Say this in the oral:** “I represent the three pegs as a tuple of tuples. A successor moves one top disk to a legal destination. BFS searches configurations level by level, and parent links reconstruct the shortest move sequence.”
+
+Memory cue: **Top disk only -> Legal destination -> Copy -> BFS -> Backtrack parents.**
+
+### How the whole program runs
+
+Python defines `successors` and `state_space_search`. It reads a disk count, calls `state_space_search`, and processes its queue. Each expansion calls `successors`. The search reconstructs and returns moves; the final loop displays them. Defining these functions does not run their bodies until a call occurs.
+
+### Representation: understand before memorizing
 
 `((3,2,1), (), ())` has all disks on peg 0. Each inner tuple is **bottom to top**. Thus `peg[-1]` is the top disk, and disk 1 is smallest.
 
@@ -75,11 +160,11 @@ Example: `((3,2), (), (1,))` means disk 1 moved from peg 0 to peg 2. `(source,de
 | `explored` | Count of popped states, including goal |
 | `current_level`, `level_count` | Display bookkeeping |
 
-## 4. Code in blocks
+### Code in blocks
 
-### Block A: generate legal moves
+#### Block A: generate legal moves
 
-Original lines 1-17:
+Relevant code block:
 
 ```python
 from collections import deque
@@ -111,9 +196,9 @@ def successors(state):
 - `map(tuple, next_pegs)` converts each peg to a tuple; the outer `tuple(...)` freezes the three-peg collection. The result can be a dictionary key.
 - Return entries contain `(new_state, action)`, so the search knows both where it can go and which move gets there.
 
-### Block B: initialize the search
+#### Block B: initialize the search
 
-Original lines 19-27:
+Relevant code block:
 
 ```python
 def state_space_search(disks):
@@ -131,9 +216,9 @@ def state_space_search(disks):
 
 `parent` also replaces a separate visited set: if a state is a key, it has already been discovered.
 
-### Block C: BFS and level display
+#### Block C: BFS and level display
 
-Original lines 29-47:
+Relevant code block:
 
 ```python
     while frontier:
@@ -163,9 +248,9 @@ The goal test occurs before successor generation. `if next_state not in parent` 
 
 The program stops immediately when the goal is popped. Therefore the final printed “Total states at Level ...” may be a **partial count of that level**, not the mathematical total of all states at that depth.
 
-### Block D: recover the shortest moves
+#### Block D: recover the shortest moves
 
-Original lines 49-61:
+Relevant code block:
 
 ```python
     if current_level != -1:
@@ -185,9 +270,9 @@ Original lines 49-61:
 
 If goal was never discovered, return `None`. Otherwise, retrieve `(previous,action)` repeatedly until the start sentinel. Each collected action points forward from previous to current, but they are collected in reverse chronological order. `path[::-1]` restores start-to-goal order.
 
-### Block E: accept input and print the result
+#### Block E: accept input and print the result
 
-Original lines 63-72:
+Relevant code block:
 
 ```python
 disks = int(input("Enter number of disks: "))
@@ -204,7 +289,7 @@ else:
 
 `input` returns a string; `int` converts it to a disk count. `enumerate(moves,1)` numbers the actions from 1. `is None` checks the explicit failure marker. An empty action list for 0 disks is different from failure.
 
-## 5. Dry run for 3 disks
+### Dry run for 3 disks
 
 The first successors of `((3,2,1),(),())` move disk 1 to peg 1 or peg 2. BFS keeps both possibilities, then explores their successors.
 
@@ -223,13 +308,13 @@ One returned shortest plan is:
 
 `2^3 - 1 = 7` verifies the minimum move count. **Moves = 7** and **explored states = 25** measure different things.
 
-## 6. Complexity and limitations
+### Complexity and limitations
 
 BFS on an explicit graph takes `O(V+E)` traversal work when state operations are treated as constant. Here `V = 3^n` and the branching factor is bounded by six source-destination pairs. This Python code copies and hashes states containing `n` disk labels, so `O(n * 3^n)` is a useful worst-case implementation estimate for both work and stored representation size, excluding printed text.
 
 The classic recursive solver uses only `O(n)` recursion space, while this BFS stores many configurations to demonstrate state-space search. Keep the disk count small. The original accepts zero or negative input without validation; negative values misleadingly create empty start/goal states. Use a positive integer in the exam. A nonnumeric input raises `ValueError`.
 
-## 7. Viva questions with short answers
+### Viva questions with short answers
 
 1. **What is a state here?** A complete arrangement of disks on the three pegs.
 2. **What is state-space search?** Searching configurations linked by valid actions to reach a goal.
@@ -249,108 +334,19 @@ The classic recursive solver uses only `O(n)` recursion space, while this BFS st
 16. **Are 25 explored states the minimum moves?** No; the solution has 7 moves. Exploration includes other candidate states.
 17. **Are the final level counts complete?** Not necessarily, because the search stops as soon as the goal is popped.
 
-## 8. Recreate the code from memory
+### Recreate the code from memory
 
 Write `successors` carefully: pick top disk, check legality, copy, pop, append, freeze. Then write a normal BFS with a `parent` dictionary. The most important explanation is why the queue gives a shortest solution; decorative level printing can be added afterward.
 
-## Appendix A. Uploaded program: commented version
+### Keywords, functions and expressions to recognize
 
-Only explanatory comments were added. Executable logic is the same as the uploaded original.
+A keyword is reserved language syntax. Names such as `all`, `min`, `set`, `range` and `enumerate` are built-ins; they are not Python keywords.
 
-```python
-# Tower of Hanoi by State-Space Search
-# Study copy: only explanatory comments were added; algorithm is unchanged.
-# See README.md for journal theory, block explanations, dry run and viva.
-
-# A deque supports FIFO breadth-first search with popleft().
-from collections import deque
-
-# Generate all legal one-disk moves from the current three-peg state.
-def successors(state):
-    result = []
-    # Make mutable peg lists from the tuple representation.
-    pegs = [list(peg) for peg in state]
-    for source in range(3):
-        # An empty source has no disk to move.
-        if not pegs[source]:
-            continue
-        # The last element of a peg is its top; smaller numbers are smaller disks.
-        disk = pegs[source][-1]
-        for destination in range(3):
-            # Skip the same peg and reject placing a larger disk on a smaller top disk.
-            if source == destination or (pegs[destination] and pegs[destination][-1] < disk):
-                continue
-            # Copy EACH peg before a trial move; sibling successors must not share modified lists.
-            next_pegs = [peg[:] for peg in pegs]
-            next_pegs[source].pop()
-            next_pegs[destination].append(disk)
-            # Freeze the complete state as tuple-of-tuples and record the action.
-            result.append((tuple(map(tuple, next_pegs)), (source, destination)))
-    return result
-
-# BFS returns a shortest action sequence for unit-cost legal moves.
-def state_space_search(disks):
-    # range(disks, 0, -1) produces largest to smallest: bottom to top.
-    start = (tuple(range(disks, 0, -1)), (), ())
-    goal = ((), (), tuple(range(disks, 0, -1)))
-    frontier = deque([start])
-    # parent also acts as the discovered set: a state is inserted only once.
-    parent = {start: (None, None)}
-    # Depth is the number of moves from the initial state.
-    depth = {start: 0}
-    explored = 0
-    current_level = -1
-    level_count = 0
-
-    # Process queued states level by level until the goal is removed.
-    while frontier:
-        state = frontier.popleft()
-        explored += 1
-        level = depth[state]
-        # These counters only format the level display; they do not control BFS.
-        if level != current_level:
-            if current_level != -1:
-                print(f"Total states at Level {current_level}: {level_count}\n")
-            current_level = level
-            level_count = 0
-            print(f"{'=' * 15} LEVEL {level} {'=' * 15}")
-        print(state)
-        level_count += 1
-        # Stop on the goal. The displayed final level can therefore be incomplete.
-        if state == goal:
-            break
-        # Discover each new state and remember how it was reached.
-        for next_state, action in successors(state):
-            if next_state not in parent:
-                parent[next_state] = (state, action)
-                depth[next_state] = depth[state] + 1
-                frontier.append(next_state)
-
-    if current_level != -1:
-        print(f"Total states at Level {current_level}: {level_count}")
-
-    if goal not in parent:
-        return None, explored
-
-    # Reconstruct moves backward via parent links, then reverse them.
-    path = []
-    state = goal
-    while parent[state][0] is not None:
-        previous, action = parent[state]
-        path.append(action)
-        state = previous
-    return path[::-1], explored
-
-# Read input. Use 3 disks for a concise exam demonstration.
-disks = int(input("Enter number of disks: "))
-moves, explored = state_space_search(disks)
-print("\nStates explored:", explored)
-print("\n========== SHORTEST SOLUTION ==========")
-if moves is None:
-    print("No solution found.")
-else:
-    # The program labels pegs 0, 1, 2, and numbers the moves from 1.
-    for number, (source, destination) in enumerate(moves, 1):
-        print(f"Move {number}: Peg {source} -> Peg {destination}")
-    print("Total moves:", len(moves))
-```
+| Expression | What it means here |
+| --- | --- |
+| `from ... import ...` | Keywords loading the deque queue type from collections. |
+| `continue` | Skip an empty source or an illegal destination. |
+| `or`, `and` | Combine legality tests; short-circuiting avoids indexing an empty peg. |
+| `[-1]`, `.pop()`, `.append()` | Read, remove and add a top disk. |
+| `map`, `tuple` | Built-ins freezing the mutable peg lists into a hashable state. |
+| `is None` | Identity test for the specific no-solution marker, distinct from an empty successful path. |

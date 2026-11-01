@@ -1,16 +1,69 @@
 # 07. 8-Queens Using Backtracking
 
-Standalone study guide. The full commented program is included at the end. The ZIP contains the original files, observed transcripts, shared reference notes and GitHub folder structure.
+## 1) Code
 
-## 1. Recognize the slip
+```python
+MAX_STEPS = 120
+states = []
 
-**Official syllabus, Part B, assignment 3:** “Implement Backtracking search to solve the 8-Queens constraint satisfaction problem.”
+def is_safe(board, row, col):
+    return all(board[r][col] != 'Q' and abs(col - c) != row - r
+               for r in range(row) for c in range(8) if board[r][c] == 'Q')
 
-**Say this in the oral:** “I place one queen per row. For each column I check conflicts with queens in earlier rows. A safe placement leads to recursion on the next row. If that branch fails, I remove the queen and try another column. Reaching row 8 means a complete solution.”
+def save_state(board, action, row, col):
+    if len(states) < MAX_STEPS:
+        states.append((action, row + 1, col + 1, [r[:] for r in board]))
 
-Memory cue: **Choose -> Check -> Recurse -> Undo if needed.**
+def solve(board, row):
+    if row == 8:
+        return True
+    for col in range(8):
+        if is_safe(board, row, col):
+            board[row][col] = 'Q'
+            save_state(board, "PLACE", row, col)
+            if solve(board, row + 1):
+                return True
+            board[row][col] = '.'
+            save_state(board, "BACKTRACK", row, col)
+    return False
 
-## 2. What to write in the practical journal
+def display_states():
+    for start in range(0, len(states), 4):
+        group = states[start:start + 4]
+        print("\n" + "=" * 100)
+        for i, (action, row, col, _) in enumerate(group):
+            print(f"STEP {start + i + 1}: {action} ({row},{col})", end="       ")
+        print()
+        print("-" * 100)
+        for r in range(8):
+            for _, _, _, board in group:
+                print(" ".join(board[r]), end="     ")
+            print()
+        print("=" * 100)
+
+board = [['.' for _ in range(8)] for _ in range(8)]
+print("==============================================")
+print("       8-QUEENS BACKTRACKING SEARCH")
+print("==============================================")
+print("\nQ = Queen")
+print(". = Empty Position")
+if solve(board, 0):
+    print("\nSearch states:")
+    display_states()
+    print("\n\n==============================================")
+    print("               FINAL SOLUTION")
+    print("==============================================")
+    for row in board:
+        print(" ".join(row))
+else:
+    print("No solution exists.")
+```
+
+## 2) Theory to write
+
+### Question
+
+**Official syllabus: Part B, assignment 3.** Implement Backtracking search to solve the 8-Queens constraint satisfaction problem.
 
 ### Aim
 
@@ -61,7 +114,21 @@ The supplied left-to-right search returns zero-based columns `[0,4,7,5,2,6,1,3]`
 
 Backtracking finds a valid 8-Queens arrangement by pruning unsafe placements and undoing choices that lead to dead ends. The program stops after its first complete solution.
 
-## 3. Understand the board and constraints
+## 3) Explaining the question, code and functioning
+
+### Understanding the question
+
+The question asks you to place eight queens so no two attack one another. You must use a CSP-style assignment and backtracking: a failed partial arrangement is undone, rather than kept while placing extra queens.
+
+**Say this in the oral:** “I place one queen per row. For each column I check conflicts with queens in earlier rows. A safe placement leads to recursion on the next row. If that branch fails, I remove the queen and try another column. Reaching row 8 means a complete solution.”
+
+Memory cue: **Choose -> Check -> Recurse -> Undo if needed.**
+
+### How the whole program runs
+
+Python defines the safety, snapshot, solving and display functions, then creates an empty board. The driver calls `solve(board,0)`. The solver calls `is_safe`, `save_state` and itself recursively. After success, the driver calls `display_states` and prints the actual final board.
+
+### Understand the board and constraints
 
 `board[row][col]` accesses one cell. Rows and columns are indexed 0 through 7. Coordinates shown in the saved-action labels are converted to 1 through 8 by adding one; that conversion does not change the algorithm's indices.
 
@@ -69,11 +136,11 @@ Example: a queen at `(0,0)` attacks `(1,0)` because the column matches and `(1,1
 
 Only **earlier rows** need checking: later rows are empty, and the current row has no queen before a placement. “No row conflict” is therefore guaranteed by the construction of `solve`, rather than separately scanned in `is_safe`.
 
-## 4. Code in blocks
+### Code in blocks
 
-### Block A: display memory and safety function
+#### Block A: display memory and safety function
 
-Original lines 1-6:
+Relevant code block:
 
 ```python
 MAX_STEPS = 120
@@ -99,9 +166,9 @@ return True
 
 When `row=0`, there are no earlier queens. `all` of an empty iterable is `True`, so the first row can try its first column.
 
-### Block B: save independent snapshots
+#### Block B: save independent snapshots
 
-Original lines 8-10:
+Relevant code block:
 
 ```python
 def save_state(board, action, row, col):
@@ -113,9 +180,9 @@ def save_state(board, action, row, col):
 
 The global list object is mutated by `.append`, so no `global states` declaration is required. The variable name is not rebound to a new list.
 
-### Block C: the backtracking solver
+#### Block C: the backtracking solver
 
-Original lines 12-23:
+Relevant code block:
 
 ```python
 def solve(board, row):
@@ -142,15 +209,15 @@ def solve(board, row):
 
 `return False` is after the loop, not inside it. If you indent it inside the loop, the program could give up after the first failed column.
 
-### Block D: display saved boards
+#### Block D: display saved boards
 
-Original lines 25-37 group snapshots in chunks of four. `states[start:start+4]` slices the next group. `enumerate` produces a local index and the saved record. `_` receives a tuple item that is unused in that loop; `_` is a normal variable by convention, not a special discard keyword.
+The corresponding program lines group snapshots in chunks of four. `states[start:start+4]` slices the next group. `enumerate` produces a local index and the saved record. `_` receives a tuple item that is unused in that loop; `_` is a normal variable by convention, not a special discard keyword.
 
 `" ".join(board[r])` joins the row's characters with spaces. `end="     "` keeps four boards side by side. This entire function is presentation; deleting it would not change the search result.
 
-### Block E: construct and solve
+#### Block E: construct and solve
 
-Original lines 39-54:
+Relevant code block:
 
 ```python
 board = [['.' for _ in range(8)] for _ in range(8)]
@@ -175,7 +242,7 @@ The nested comprehension makes eight independent row lists. Avoid `[['.'] * 8] *
 
 `solve(board,0)` starts at the first row. On success, the final `board` holds a valid solution and is printed independently of the snapshot log.
 
-## 5. Dry run and verified final board
+### Dry run and verified final board
 
 At row 0, column 0 is safe and gets a queen. At row 1, column 0 conflicts vertically, column 1 conflicts diagonally, and column 2 is safe. The solver continues deeper; if a later row has no safe column, it removes the latest queen and tries another choice. The final solution therefore need not keep these early choices.
 
@@ -194,7 +261,7 @@ Every row has one queen; the columns are distinct; for every pair the absolute r
 
 The saved-state list reaches 120 entries. Its final saved snapshot is a backtrack, **not the final solution**. That is expected: the search continues after the recording limit. Use the separately printed “FINAL SOLUTION” board to show success.
 
-## 6. Complexity and limitations
+### Complexity and limitations
 
 The generalized row-by-row N-Queens search has factorial-scale branching after excluding reused columns; `O(N!)` is a common search-tree shorthand. It is not a precise runtime bound for every implementation. This version scans up to `N` cells in each of `N` earlier rows for a safety check and tries up to `N` columns per partial assignment, so extra polynomial factors apply; a coarse upper bound for this style is `O(N^3 * N!)`.
 
@@ -202,7 +269,7 @@ The board uses `O(N^2)` storage and recursion depth `O(N)`. With at most `L` sna
 
 If asked to adapt to N-Queens, all hardcoded 8s must be generalized together; just changing the board allocation is insufficient. `states` also needs resetting before an independent rerun if you reuse functions in one interpreter.
 
-## 7. Viva questions with short answers
+### Viva questions with short answers
 
 1. **What is a CSP?** A problem defined by variables, domains and constraints.
 2. **What are the variables here?** One chosen queen column for each row.
@@ -223,88 +290,19 @@ If asked to adapt to N-Queens, all hardcoded 8s must be generalized together; ju
 17. **Why avoid repeated inner lists in board initialization?** Shared row objects would corrupt multiple rows when one cell is assigned.
 18. **Why is the final snapshot not necessarily solved?** Recording stops at 120 entries while the search continues.
 
-## 8. Recreate the code from memory
+### Recreate the code from memory
 
 Start with the solver skeleton: base case, loop columns, safety check, place, recurse, remove. Then write column and diagonal conflict tests. Save/display states only after the core logic works. Be able to explain **why undo happens only after a failed recursive call**.
 
-## Appendix A. Uploaded program: commented version
+### Keywords, functions and expressions to recognize
 
-Only explanatory comments were added. Executable logic is the same as the uploaded original.
+A keyword is reserved language syntax. Names such as `all`, `min`, `set`, `range` and `enumerate` are built-ins; they are not Python keywords.
 
-```python
-# 8-Queens Using Backtracking
-# Study copy: only explanatory comments were added; algorithm is unchanged.
-# See README.md for journal theory, block explanations, dry run and viva.
-
-# Limit ONLY the number of saved display snapshots, not the search itself.
-MAX_STEPS = 120
-states = []
-
-# Check a new position against queens in PREVIOUS rows.
-def is_safe(board, row, col):
-    # Reject same column or same diagonal. Same-row conflicts are prevented by construction.
-    return all(board[r][col] != 'Q' and abs(col - c) != row - r
-               # Read this as nested loops over earlier rows, retaining cells that contain a queen.
-               for r in range(row) for c in range(8) if board[r][c] == 'Q')
-
-# Store an independent board snapshot and human-readable 1-based coordinates.
-def save_state(board, action, row, col):
-    if len(states) < MAX_STEPS:
-        # [r[:] for r in board] copies each row so later edits do not change old snapshots.
-        states.append((action, row + 1, col + 1, [r[:] for r in board]))
-
-# Recursive backtracking: choose a column for this row.
-def solve(board, row):
-    # Rows 0..7 are filled; row == 8 means all eight queens are placed.
-    if row == 8:
-        return True
-    for col in range(8):
-        if is_safe(board, row, col):
-            # Choose: tentatively place one queen.
-            board[row][col] = 'Q'
-            save_state(board, "PLACE", row, col)
-            # Explore the next row. Propagate success immediately.
-            if solve(board, row + 1):
-                return True
-            # Unchoose: the next row failed, so remove this queen and try another column.
-            board[row][col] = '.'
-            save_state(board, "BACKTRACK", row, col)
-    # No column worked in this row: report failure to the previous recursive call.
-    return False
-
-# Display snapshots four boards at a time; this is presentation, not search logic.
-def display_states():
-    for start in range(0, len(states), 4):
-        group = states[start:start + 4]
-        print("\n" + "=" * 100)
-        # _ receives an unused tuple field. enumerate adds an index to each snapshot.
-        for i, (action, row, col, _) in enumerate(group):
-            print(f"STEP {start + i + 1}: {action} ({row},{col})", end="       ")
-        print()
-        print("-" * 100)
-        for r in range(8):
-            for _, _, _, board in group:
-                print(" ".join(board[r]), end="     ")
-            print()
-        print("=" * 100)
-
-# Nested comprehension creates eight independent row lists.
-board = [['.' for _ in range(8)] for _ in range(8)]
-print("==============================================")
-print("       8-QUEENS BACKTRACKING SEARCH")
-print("==============================================")
-print("\nQ = Queen")
-print(". = Empty Position")
-# Search begins at row 0 and stops at the first solution.
-if solve(board, 0):
-    print("\nSearch states:")
-    display_states()
-    print("\n\n==============================================")
-    print("               FINAL SOLUTION")
-    print("==============================================")
-    # Print the actual final board separately; it can be beyond the saved snapshot limit.
-    for row in board:
-        print(" ".join(row))
-else:
-    print("No solution exists.")
-```
+| Expression | What it means here |
+| --- | --- |
+| `all(...)` | Built-in requiring every generated safety test to pass; empty input is true. |
+| `for ... if ...` | Generator clauses scanning earlier cells containing queens. |
+| `abs(col-c)` | Absolute horizontal distance for the diagonal test. |
+| `return True` | Propagate a complete solution without undoing its queens. |
+| `[r[:] for r in board]` | Copy every row to preserve a snapshot independently. |
+| `_` | An ordinary variable name conventionally used for an unneeded value. |

@@ -1,16 +1,64 @@
 # 04. Local Beam Search for the Traveling Salesman Problem
 
-Standalone study guide. The full commented program is included at the end. The ZIP contains the original files, observed transcripts, shared reference notes and GitHub folder structure.
+## 1) Code
 
-## 1. Recognize the slip
+```python
+import random
 
-**Official syllabus, Part A, assignment 7:** “Implement Local Beam Search for The Traveling Salesman Problem (TSP).”
+dist = [
+    [0, 10, 15, 20, 25, 30],
+    [10, 0, 35, 25, 20, 15],
+    [15, 35, 0, 30, 10, 20],
+    [20, 25, 30, 0, 15, 25],
+    [25, 20, 10, 15, 0, 35],
+    [30, 15, 20, 25, 35, 0]
+]
+n = 6
+k = 2
 
-**Say this in the oral:** “I keep two candidate tours. I generate neighbors by swapping two non-start cities, pool neighbors from both tours, and keep the two cheapest candidates. I record the best tour seen over ten iterations. This is a local beam-search variant and does not guarantee a global optimum.”
+def cost(path):
+    return sum(dist[path[i]][path[i + 1]] for i in range(n - 1)) + dist[path[-1]][path[0]]
 
-Memory cue: **k tours -> All their neighbors -> Pool -> Best k -> Repeat -> Best ever.**
+def neighbors(path):
+    result = []
+    for i in range(1, n):
+        for j in range(i + 1, n):
+            new = path[:]
+            new[i], new[j] = new[j], new[i]
+            result.append(tuple(new))
+    return result
 
-## 2. What to write in the practical journal
+states = set()
+while len(states) < k:
+    tail = list(range(1, n))
+    random.shuffle(tail)
+    states.add(tuple([0] + tail))
+
+visited = set(states)
+best = min(states, key=cost)
+for step in range(10):
+    candidates = {route for state in states for route in neighbors(list(state)) if route not in visited}
+    if not candidates:
+        break
+    visited.update(candidates)
+    states = set(sorted(candidates, key=cost)[:k])
+    step_best = min(states, key=cost)
+    if cost(step_best) < cost(best):
+        best = step_best
+    print(f"\nStep {step + 1}")
+    print("Route:", list(step_best) + [step_best[0]])
+    print("Distance:", cost(step_best))
+
+print("\n-------------------------")
+print("Final Best Route:", list(best) + [best[0]])
+print("Minimum Distance:", cost(best))
+```
+
+## 2) Theory to write
+
+### Question
+
+**Official syllabus: Part A, assignment 7.** Implement Local Beam Search for The Traveling Salesman Problem (TSP).
 
 ### Aim
 
@@ -56,13 +104,27 @@ This shortened version also stores a **global visited set containing every gener
 
 ### Observation / result
 
-In the reproducible run using `random.seed(0)` before execution, a best tour is `0 -> 1 -> 5 -> 2 -> 4 -> 3 -> 0`, with cost `10+15+20+10+15+20 = 90`. Exhaustive checking of this small six-city instance confirms an optimum of 90. That verification is separate from the beam-search algorithm's guarantee.
+An example best tour is `0 -> 1 -> 5 -> 2 -> 4 -> 3 -> 0`, with cost `10+15+20+10+15+20 = 90`. The starting tours are random, so the trace and selected tour can vary. The reported result is the best found in that run.
 
 ### Conclusion
 
 The local beam-search variant finds a low-cost tour for the supplied TSP instance using a limited set of current candidates. Its result is the best found during the run, and global optimality is not guaranteed by this search method.
 
-## 3. Representation
+## 3) Explaining the question, code and functioning
+
+### Understanding the question
+
+The question asks for a short tour that visits every city once and returns to its start. Local beam search keeps several current candidates and chooses the next beam from their pooled successors.
+
+**Say this in the oral:** “I keep two candidate tours. I generate neighbors by swapping two non-start cities, pool neighbors from both tours, and keep the two cheapest candidates. I record the best tour seen over ten iterations. This is a local beam-search variant and does not guarantee a global optimum.”
+
+Memory cue: **k tours -> All their neighbors -> Pool -> Best k -> Repeat -> Best ever.**
+
+### How the whole program runs
+
+Python stores the matrix and parameters, defines `cost` and `neighbors`, then immediately generates random initial tours. The top-level generation loop calls `neighbors` to build candidates and calls `cost` to rank them. It prints each generation and finally the best tour seen.
+
+### Representation
 
 `dist[a][b]` is the cost from city `a` to city `b`. The supplied matrix is symmetric and has zero diagonal. A tour such as `(0,1,5,2,4,3)` contains each city once. The closing 0 is added only when printing; `cost` already includes the closing edge.
 
@@ -74,15 +136,15 @@ The local beam-search variant finds a low-cost tour for the supplied TSP instanc
 | `step_best` | Cheapest member of the current beam |
 | `best` | Cheapest tour encountered across the search |
 
-## 4. Code in blocks
+### Code in blocks
 
-### Block A: matrix and parameters
+#### Block A: matrix and parameters
 
-Original lines 1-12 import `random`, define the 6 x 6 distance matrix, and set `n=6`, `k=2`. Indexing is zero-based. If the number of cities changes, the matrix and `n` must change together.
+The corresponding program lines import `random`, define the 6 x 6 distance matrix, and set `n=6`, `k=2`. Indexing is zero-based. If the number of cities changes, the matrix and `n` must change together.
 
-### Block B: evaluate a tour
+#### Block B: evaluate a tour
 
-Original lines 14-15:
+Relevant code block:
 
 ```python
 def cost(path):
@@ -91,9 +153,9 @@ def cost(path):
 
 The generator adds consecutive edges for indices 0 through `n-2`. `path[-1]` is the last city; `path[0]` is the start. The final addition closes the cycle. Omitting it would solve a different problem, a visiting path rather than a tour.
 
-### Block C: generate a neighborhood
+#### Block C: generate a neighborhood
 
-Original lines 17-24:
+Relevant code block:
 
 ```python
 def neighbors(path):
@@ -110,9 +172,9 @@ The outer loop chooses one non-start position. The inner loop chooses a later po
 
 `path[:]` makes a separate list; a swap must not change the current route. The simultaneous assignment exchanges the two cities. Converting to `tuple` makes each new route usable as a set member. These are **pair-swap neighbors**, not the segment reversal operation commonly called 2-opt.
 
-### Block D: choose starting tours
+#### Block D: choose starting tours
 
-Original lines 26-33:
+Relevant code block:
 
 ```python
 states = set()
@@ -129,9 +191,9 @@ best = min(states, key=cost)
 
 `min(states, key=cost)` compares states by the result of the `cost` function. `key=cost` passes the function itself; writing `key=cost()` would try to call it immediately without a tour argument.
 
-### Block E: pool and select the beam
+#### Block E: pool and select the beam
 
-Original lines 34-45:
+Relevant code block:
 
 ```python
 for step in range(10):
@@ -158,9 +220,9 @@ The set comprehension means:
 
 `if not candidates` tests whether the set is empty. `break` exits the generation loop. `best` is updated only for a strict cost improvement. A later, worse `step_best` never overwrites a better historical `best`.
 
-### Block F: final display
+#### Block F: final display
 
-Original lines 47-49:
+Relevant code block:
 
 ```python
 print("\n-------------------------")
@@ -170,7 +232,7 @@ print("Minimum Distance:", cost(best))
 
 `list(best) + [best[0]]` shows the return to the starting city. **“Minimum Distance” is the program's label for best found**, not evidence that the algorithm proved the global minimum.
 
-## 5. Tiny worked example
+### Tiny worked example
 
 For `(0,1,5,2,4,3)`, the edges have costs 10, 15, 20, 10, 15 and 20, totaling 90.
 
@@ -178,7 +240,7 @@ For `(0,1,2,3,4,5)`, the cost is `10+35+30+15+35+30 = 155`. Swapping positions 2
 
 For a hypothetical candidate pool with costs `[120,95,110,90]` and `k=2`, retain the candidates with 90 and 95. The best tour seen so far may stay at 90 even if a later generation's best costs 100.
 
-## 6. Complexity and limitations
+### Complexity and limitations
 
 One tour has `O(n^2)` pair-swap neighbors. Copying and evaluating a tour cost `O(n)` each. For `k` beam members and `C=O(k*n^2)` distinct candidates, candidate generation is about `O(k*n^3)`, and ranking costs `O(C*n + C log C)` because Python evaluates each sort key once.
 
@@ -186,7 +248,7 @@ This exact code is **not** an `O(k)`-memory implementation: it materializes cand
 
 Random starting tours can change the trace and outcome. A fixed seed helps reproduce a demonstration but does not create an optimality guarantee. If `k` exceeds the number of possible distinct fixed-start tours, initialization cannot finish. The supplied `n=6, k=2` is valid. Reducing beam diversity can also limit exploration.
 
-## 7. Viva questions with short answers
+### Viva questions with short answers
 
 1. **What is TSP?** Find a minimum-cost cycle visiting each city once and returning to the start.
 2. **What is beam width?** The maximum number of current candidates retained; here 2.
@@ -207,84 +269,19 @@ Random starting tours can change the trace and outcome. A fixed seed helps repro
 17. **What is an evaluation function?** A function that scores a candidate; here lower tour cost is better.
 18. **What is the verified optimum of this tiny instance?** 90, checked separately by enumerating all fixed-start tours.
 
-## 8. Recreate the code from memory
+### Recreate the code from memory
 
 Write a cost function including return-to-start. Write pair-swap neighbors with a copy. Initialize two random tours, then repeatedly pool, rank and keep two. Keep a separate historical best. In the oral, say **best found** unless you also explain the independent exhaustive verification.
 
-## Appendix A. Uploaded program: commented version
+### Keywords, functions and expressions to recognize
 
-Only explanatory comments were added. Executable logic is the same as the uploaded original.
+A keyword is reserved language syntax. Names such as `all`, `min`, `set`, `range` and `enumerate` are built-ins; they are not Python keywords.
 
-```python
-# Local Beam Search for TSP
-# Study copy: only explanatory comments were added; algorithm is unchanged.
-# See README.md for journal theory, block explanations, dry run and viva.
-
-# random.shuffle creates different initial candidate tours.
-import random
-
-# dist[a][b] is travel cost between cities a and b; this matrix is symmetric.
-dist = [
-    [0, 10, 15, 20, 25, 30],
-    [10, 0, 35, 25, 20, 15],
-    [15, 35, 0, 30, 10, 20],
-    [20, 25, 30, 0, 15, 25],
-    [25, 20, 10, 15, 0, 35],
-    [30, 15, 20, 25, 35, 0]
-]
-# Six cities; beam width k = 2 means retain at most two current tours.
-n = 6
-k = 2
-
-# Sum consecutive travel costs AND the final edge back to the starting city.
-def cost(path):
-    return sum(dist[path[i]][path[i + 1]] for i in range(n - 1)) + dist[path[-1]][path[0]]
-
-# Generate neighbors by swapping two non-start city positions.
-def neighbors(path):
-    result = []
-    # Start at index 1 so city 0 remains fixed as the first city.
-    for i in range(1, n):
-        for j in range(i + 1, n):
-            # Copy the route before swapping so the original candidate is unchanged.
-            new = path[:]
-            new[i], new[j] = new[j], new[i]
-            result.append(tuple(new))
-    return result
-
-# Generate two distinct random starting tours. A set removes duplicates.
-states = set()
-while len(states) < k:
-    tail = list(range(1, n))
-    random.shuffle(tail)
-    # A route tuple is hashable, so it can be placed in a set.
-    states.add(tuple([0] + tail))
-
-# This variant remembers ALL generated candidates, including discarded candidates.
-visited = set(states)
-# best is the lowest-cost tour seen so far; key=cost compares tour distances.
-best = min(states, key=cost)
-# Try at most 10 generations. This is a search budget, not a proof of optimality.
-for step in range(10):
-    # Pool unvisited swap-neighbors from BOTH beam members into one candidate set.
-    candidates = {route for state in states for route in neighbors(list(state)) if route not in visited}
-    if not candidates:
-        break
-    # Even candidates not retained in the beam are marked visited by this line.
-    visited.update(candidates)
-    # Rank by increasing cost, keep the best k, convert the result back to a set.
-    states = set(sorted(candidates, key=cost)[:k])
-    step_best = min(states, key=cost)
-    # Preserve the historical best even if the current beam later becomes worse.
-    if cost(step_best) < cost(best):
-        best = step_best
-    print(f"\nStep {step + 1}")
-    # Append city 0 only for displaying a closed tour; the route tuple has six entries.
-    print("Route:", list(step_best) + [step_best[0]])
-    print("Distance:", cost(step_best))
-
-print("\n-------------------------")
-print("Final Best Route:", list(best) + [best[0]])
-# The printed label means best found by this run; optimality is not guaranteed.
-print("Minimum Distance:", cost(best))
-```
+| Expression | What it means here |
+| --- | --- |
+| `while`, `for` | Keywords for distinct-tour initialization and generation/neighbor loops. |
+| `set`, `tuple` | Built-in types used for distinct, hashable routes. |
+| `key=cost` | Passes the cost function to min/sorted; key is a parameter name. |
+| `[:k]` | Keep the first k entries of the sorted candidate list. |
+| `path[:]` | Copy a flat route list before swapping. |
+| `.update(candidates)` | Adds every candidate to the visited set, not only retained tours. |

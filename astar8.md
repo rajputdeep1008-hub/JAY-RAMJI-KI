@@ -1,16 +1,86 @@
 # 02. A* Search for the 8-Puzzle
 
-Standalone study guide. The full commented program is included at the end. The ZIP contains the original files, observed transcripts, shared reference notes and GitHub folder structure.
+## 1) Code
 
-## 1. Recognize the slip
+```python
+import heapq
 
-**Official syllabus, Part A, assignment 3:** “Implement A* Search for 8 puzzle problem”.
+start = (2, 8, 3, 1, 6, 4, 7, 0, 5)
+goal = (1, 2, 3, 8, 0, 4, 7, 6, 5)
+moves = {"Up": (-1, 0), "Down": (1, 0), "Left": (0, -1), "Right": (0, 1)}
 
-**Say this in the oral:** “I represent the 8-puzzle as a tuple with zero as the blank. A* expands the state with the smallest `f = g + h`, where `g` is moves made and `h` is Manhattan distance. I generate legal blank moves, save cheaper paths and parent links, then reconstruct the path when the goal is reached.”
 
-Memory cue: **Represent -> Estimate -> Pop minimum f -> Generate -> Improve -> Reconstruct.**
+def show(state):
+    for i in range(0, 9, 3):
+        print(state[i:i + 3])
+    print()
 
-## 2. What to write in the practical journal
+
+def heuristic(state):
+    return sum(abs(i // 3 - goal.index(tile) // 3) + abs(i % 3 - goal.index(tile) % 3)
+               for i, tile in enumerate(state) if tile)
+
+
+def neighbors(state):
+    blank = state.index(0)
+    row, col = divmod(blank, 3)
+    for move, (dr, dc) in moves.items():
+        r, c = row + dr, col + dc
+        if 0 <= r < 3 and 0 <= c < 3:
+            other = r * 3 + c
+            new = list(state)
+            new[blank], new[other] = new[other], new[blank]
+            yield tuple(new), move
+
+
+def a_star(start, goal):
+    queue = [(heuristic(start), 0, start)]
+    costs, parents = {start: 0}, {start: (None, None)}
+    visited = set()
+    while queue:
+        _, cost, state = heapq.heappop(queue)
+        if state in visited:
+            continue
+        visited.add(state)
+        if state == goal:
+            path = []
+            while state is not None:
+                previous, move = parents[state]
+                path.append((state, move))
+                state = previous
+            return path[::-1], len(visited)
+        for nxt, move in neighbors(state):
+            new_cost = cost + 1
+            if nxt not in costs or new_cost < costs[nxt]:
+                costs[nxt] = new_cost
+                parents[nxt] = (state, move)
+                heapq.heappush(queue, (new_cost + heuristic(nxt), new_cost, nxt))
+    return None, len(visited)
+
+
+print("=" * 50, "\n        A* ALGORITHM - 8 PUZZLE\n", "=" * 50, sep="")
+print("\nInitial State:")
+show(start)
+print("Goal State:")
+show(goal)
+print("Searching for optimal solution...\n")
+
+solution, explored = a_star(start, goal)
+if solution:
+    print("=" * 50, "\n             SOLUTION\n", "=" * 50, sep="")
+    print(f"\nTotal moves: {len(solution) - 1}\nStates explored: {explored}\n")
+    for step, (state, move) in enumerate(solution):
+        print(f"Step {step}: " + ("Initial State" if step == 0 else f"Move Blank {move}"))
+        show(state)
+else:
+    print("No solution exists.")
+```
+
+## 2) Theory to write
+
+### Question
+
+**Official syllabus: Part A, assignment 3.** Implement A* Search for 8 puzzle problem
 
 ### Aim
 
@@ -65,7 +135,21 @@ For the supplied board, `h(start) = 5`. The program finds a 5-move solution and 
 
 A* solves the given 8-puzzle optimally using actual path cost and a consistent Manhattan heuristic. Parent links recover the move sequence without storing a full path in every frontier entry.
 
-## 3. Representation and coordinates
+## 3) Explaining the question, code and functioning
+
+### Understanding the question
+
+The question asks for a sequence of legal blank moves that changes the supplied initial board into the goal board. You must use A* priority selection, not just print the target or make greedy moves based only on Manhattan distance.
+
+**Say this in the oral:** “I represent the 8-puzzle as a tuple with zero as the blank. A* expands the state with the smallest `f = g + h`, where `g` is moves made and `h` is Manhattan distance. I generate legal blank moves, save cheaper paths and parent links, then reconstruct the path when the goal is reached.”
+
+Memory cue: **Represent -> Estimate -> Pop minimum f -> Generate -> Improve -> Reconstruct.**
+
+### How the whole program runs
+
+Python imports heapq, stores the puzzle/move data and defines the functions. The driver prints the start/goal with `show`, then calls `a_star`. That function repeatedly calls `neighbors` and `heuristic`. Once it returns a path and explored count, the driver prints the recovered boards in order.
+
+### Representation and coordinates
 
 `(2, 8, 3, 1, 6, 4, 7, 0, 5)` means the rows are `(2,8,3)`, `(1,6,4)`, `(7,0,5)`.
 
@@ -81,11 +165,11 @@ Tuples are immutable and hashable, so these integer tuples can be dictionary key
 | `visited` | Closed states already popped and processed |
 | `path` | Reconstructed `(state, incoming_move)` pairs |
 
-## 4. Code in blocks
+### Code in blocks
 
-### Block A: setup and display
+#### Block A: setup and display
 
-Original lines 1-11:
+Relevant code block:
 
 ```python
 import heapq
@@ -103,9 +187,9 @@ def show(state):
 
 `import heapq` loads heap operations. The dictionary `moves` maps each blank-move name to `(row_change, column_change)`. Negative row means Up. `state[i:i + 3]` slices out one row; `range(0, 9, 3)` gives 0, 3 and 6.
 
-### Block B: heuristic
+#### Block B: heuristic
 
-Original lines 14-16:
+Relevant code block:
 
 ```python
 def heuristic(state):
@@ -119,9 +203,9 @@ This is a generator expression. Expanded idea: loop over every numbered tile, ca
 
 **Heuristic is a function**, not a search algorithm by itself. Manhattan is one choice of heuristic; A* is the search algorithm that uses it.
 
-### Block C: generate legal successor boards
+#### Block C: generate legal successor boards
 
-Original lines 19-28:
+Relevant code block:
 
 ```python
 def neighbors(state):
@@ -140,9 +224,9 @@ def neighbors(state):
 
 `0 <= r < 3` is a chained comparison that rejects out-of-board moves. The simultaneous assignment swaps two list entries. `yield` returns one successor at a time and pauses the generator; it does not finish the function like `return`.
 
-### Block D: frontier, costs, closing, and goal test
+#### Block D: frontier, costs, closing, and goal test
 
-Original lines 31-40:
+Relevant code block:
 
 ```python
 def a_star(start, goal):
@@ -161,9 +245,9 @@ The queue starts as a one-element list, already a valid heap. `heappop` removes 
 
 `continue` skips an already closed state. A state may have duplicate heap entries because Python's `heapq` is not using a decrease-key operation here. `visited.add` happens after popping, whereas the BFS programs mark states when enqueuing.
 
-### Block E: reconstruct the solution
+#### Block E: reconstruct the solution
 
-Original lines 41-46:
+Relevant code block:
 
 ```python
             path = []
@@ -176,9 +260,9 @@ Original lines 41-46:
 
 At the goal, follow `parents[state]` backward. The start parent is `(None, None)`, so the loop ends after recording the start. `path[::-1]` reverses the list. Both the initial board and goal board are included; therefore moves = `len(path) - 1`.
 
-### Block F: relax edges and schedule successors
+#### Block F: relax edges and schedule successors
 
-Original lines 47-53:
+Relevant code block:
 
 ```python
         for nxt, move in neighbors(state):
@@ -192,11 +276,11 @@ Original lines 47-53:
 
 `nxt not in costs or ...` uses short-circuiting: if the state is new, Python does not evaluate `costs[nxt]`, avoiding a missing-key error. If a cheaper route is found, record both its new cost and its parent. `heappush` restores heap order after insertion. Exhausting the queue returns `None` with the number of closed states.
 
-### Block G: driver and output
+#### Block G: driver and output
 
-Original lines 56-71 display start/goal, call `a_star`, and print each recovered state. `sep=""` controls separators between `print` arguments. `enumerate(solution)` numbers states from 0. The conditional expression prints “Initial State” for step 0 and a blank-movement label afterward.
+The corresponding program lines display start/goal, call `a_star`, and print each recovered state. `sep=""` controls separators between `print` arguments. `enumerate(solution)` numbers states from 0. The conditional expression prints “Initial State” for step 0 and a blank-movement label afterward.
 
-## 5. Dry run
+### Dry run
 
 Initial blank position is index 7, coordinate `(2,1)`. Three moves are legal:
 
@@ -219,7 +303,7 @@ A* chooses Up first. For this example the solution is:
 
 The original output calls all 6 popped distinct states “explored”; only the 5 non-goal states have their successors generated.
 
-## 6. Complexity and changes to watch
+### Complexity and changes to watch
 
 In a general search tree A* may require exponential time and memory in solution depth. On a finite graph, a heap-based implementation with a consistent heuristic has the familiar `O((V + E) log V)` search bound when degree is bounded, excluding heuristic/representation overhead; memory includes costs, parents, closed states and heap entries. For the fixed 8-puzzle there are `9! / 2 = 181,440` reachable configurations from a valid start. Memory use, rather than one heuristic calculation, often becomes the practical limit.
 
@@ -227,7 +311,7 @@ In a general search tree A* may require exponential time and memory in solution 
 
 There is no input validation or inversion-parity precheck. For a 3 x 3 board, start and goal must have the same inversion parity when zero is ignored. A different but valid unsolvable arrangement can make the search explore the entire reachable component before failing. The supplied goal is not the standard `1..8,0` arrangement, so do not compare only with the standard goal's parity.
 
-## 7. Viva questions with short answers
+### Viva questions with short answers
 
 1. **What is A*?** Informed best-first search using minimum `g + h`.
 2. **What is `g` here?** Number of moves from the initial board.
@@ -248,110 +332,19 @@ There is no input validation or inversion-parity precheck. For a 3 x 3 board, st
 17. **Why might the same state appear in the heap twice?** A cheaper path inserts another entry instead of editing the old entry.
 18. **Is Manhattan a search type?** No. It is a heuristic function used to guide a search type.
 
-## 8. Recreate the code from memory
+### Recreate the code from memory
 
 Write state constants, Manhattan calculation, legal blank swaps, then the A* loop. Remember the three records: **heap for choice, costs for improvement, parents for path**. Add board printing last. To explain a heap entry, point to its three fields and say `f`, `g`, state.
 
-## Appendix A. Uploaded program: commented version
+### Keywords, functions and expressions to recognize
 
-Only explanatory comments were added. Executable logic is the same as the uploaded original.
+A keyword is reserved language syntax. Names such as `all`, `min`, `set`, `range` and `enumerate` are built-ins; they are not Python keywords.
 
-```python
-# A* Search for the 8-Puzzle
-# Study copy: only explanatory comments were added; algorithm is unchanged.
-# See README.md for journal theory, block explanations, dry run and viva.
-
-# heapq supplies a min-priority queue: remove the smallest tuple first.
-import heapq
-
-# Flatten a 3 x 3 board into an immutable 9-value tuple; 0 means blank.
-start = (2, 8, 3, 1, 6, 4, 7, 0, 5)
-goal = (1, 2, 3, 8, 0, 4, 7, 6, 5)
-# Names describe movement of the BLANK, not the tile.
-moves = {"Up": (-1, 0), "Down": (1, 0), "Left": (0, -1), "Right": (0, 1)}
-
-
-# Print three slices of length 3 as board rows.
-def show(state):
-    for i in range(0, 9, 3):
-        print(state[i:i + 3])
-    print()
-
-
-# Manhattan heuristic: total row + column displacement of tiles 1..8.
-def heuristic(state):
-    # // gives row, % gives column. goal.index(tile) finds that tile in the goal.
-    return sum(abs(i // 3 - goal.index(tile) // 3) + abs(i % 3 - goal.index(tile) % 3)
-               # The filter if tile excludes 0: the blank must not be counted.
-               for i, tile in enumerate(state) if tile)
-
-
-# Generator: yield each legal successor and the blank move that produced it.
-def neighbors(state):
-    blank = state.index(0)
-    row, col = divmod(blank, 3)
-    for move, (dr, dc) in moves.items():
-        r, c = row + dr, col + dc
-        # Reject coordinates outside the board.
-        if 0 <= r < 3 and 0 <= c < 3:
-            other = r * 3 + c
-            # Convert to a mutable list, swap once, then yield an immutable tuple.
-            new = list(state)
-            new[blank], new[other] = new[other], new[blank]
-            yield tuple(new), move
-
-
-# A*: choose smallest f = g + h. Every move costs one.
-def a_star(start, goal):
-    # Heap entries are (estimated total cost f, actual cost g, state).
-    queue = [(heuristic(start), 0, start)]
-    # costs stores best known g; parents stores (previous state, incoming move).
-    costs, parents = {start: 0}, {start: (None, None)}
-    # Closed set: already removed/processed states. Safe here with consistent Manhattan h.
-    visited = set()
-    while queue:
-        # The underscore receives f; cost receives g. The state is unpacked too.
-        _, cost, state = heapq.heappop(queue)
-        # A state can have old duplicate heap entries; skip it if already closed.
-        if state in visited:
-            continue
-        visited.add(state)
-        if state == goal:
-            # Follow parent links from goal to start and reverse the collected list.
-            path = []
-            while state is not None:
-                previous, move = parents[state]
-                path.append((state, move))
-                state = previous
-            return path[::-1], len(visited)
-        # Relax each edge: accept an unseen state or a strictly cheaper route to it.
-        for nxt, move in neighbors(state):
-            new_cost = cost + 1
-            if nxt not in costs or new_cost < costs[nxt]:
-                costs[nxt] = new_cost
-                parents[nxt] = (state, move)
-                # Reinsert using its new priority f = new_cost + heuristic(nxt).
-                heapq.heappush(queue, (new_cost + heuristic(nxt), new_cost, nxt))
-    # The frontier became empty: no reachable solution was found.
-    return None, len(visited)
-
-
-# Driver: show the problem, run A*, then print the recovered path.
-print("=" * 50, "\n        A* ALGORITHM - 8 PUZZLE\n", "=" * 50, sep="")
-print("\nInitial State:")
-show(start)
-print("Goal State:")
-show(goal)
-print("Searching for optimal solution...\n")
-
-solution, explored = a_star(start, goal)
-if solution:
-    print("=" * 50, "\n             SOLUTION\n", "=" * 50, sep="")
-    # Path includes the start board, so number of moves is number of states minus one.
-    print(f"\nTotal moves: {len(solution) - 1}\nStates explored: {explored}\n")
-    for step, (state, move) in enumerate(solution):
-        print(f"Step {step}: " + ("Initial State" if step == 0 else f"Move Blank {move}"))
-        show(state)
-else:
-    print("No solution exists.")
-```
+| Expression | What it means here |
+| --- | --- |
+| `yield` | Keyword producing one neighbor and pausing the generator. |
+| `continue` | Keyword skipping an already closed heap entry. |
+| `not in`, `or` | Accept an unseen state or a cheaper known route; the test short-circuits. |
+| `enumerate`, `sum`, `abs` | Built-ins used to calculate Manhattan distance; not keywords. |
+| `//`, `%`, `divmod` | Convert a flat index to row and column. |
+| `path[::-1]` | A reversed copy: parent traversal collected the path backward. |
